@@ -9,7 +9,7 @@ import os
 
 def load_model_and_scaler(model_path, scaler_path):
     """Loads the Keras model and the StandardScaler."""
-    model = keras.models.load_model(model_path)
+    model = keras.models.load_model(model_path, compile=False)
     scaler = joblib.load(scaler_path)
     return model, scaler
 
