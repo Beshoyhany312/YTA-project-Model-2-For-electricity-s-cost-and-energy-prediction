@@ -20,7 +20,7 @@ try:
 except Exception as e:
     st.sidebar.error("❌ مشكلة في الملفات")
 
-# 3. واجهة المستخدم (تصميم جديد ومضمون)
+# 3. واجهة المستخدم
 st.title("🤖 نظام توقع استهلاك الطاقة الكهربائية")
 st.markdown("---")
 
@@ -28,7 +28,7 @@ col1, col2 = st.columns([1, 1.5])
 
 with col1:
     st.info("### ⚙️ الإعدادات")
-    model_choice = st.radio(
+    model_choice = st.sidebar.radio(
         "اختر تقنية الذكاء الاصطناعي:",
         ("الموديل الأساسي (MLP)", "الموديل المتطور (LSTM)")
     )
@@ -39,23 +39,25 @@ with col2:
     st.success("### 📊 نتائج التحليل")
     if predict_btn:
         try:
-            if model_choice == "الموديل الأساسي (MLP)":
+            if "MLP" in model_choice:
+                # تصحيح عدد المدخلات لـ 10 كما يتوقع الـ Scaler
                 data = np.zeros((1, 10))
                 data[0, 0] = input_val
-                res = mlp_model.predict(scaler.transform(data))[0][0]
+                scaled_data = scaler.transform(data)
+                res = mlp_model.predict(scaled_data)[0][0]
             else:
+                # موديل LSTM
                 data = np.zeros((1, 1, 10))
                 data[0, 0, 0] = input_val
                 res = lstm_model.predict(data)[0][0]
 
-            # عرض النتيجة بشكل كبير وواضح
             st.metric(label=f"التكلفة المتوقعة ({model_choice})", value=f"{res:.2f} جنيه")
             st.balloons()
             
         except Exception as e:
-            st.error(f"حدث خطأ: {e}")
+            st.error(f"حدث خطأ في الحساب: {e}")
     else:
-        st.write("انتظار إدخال البيانات...")
+        st.write("انتظار إدخال البيانات والضغط على الزر...")
 
 st.markdown("---")
-st.caption("تم التطوير بواسطة المندسة سلمى - مشروع التخرج 2026")
+st.caption(" - مشروع التخرج 2026")
