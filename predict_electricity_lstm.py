@@ -16,9 +16,9 @@ def load_all_assets():
 
 try:
     mlp_model, scaler, lstm_model = load_all_assets()
-    st.sidebar.success("✅ الأنظمة جاهزة")
+    st.sidebar.success("✅ الأنظمة جاهزة للعمل")
 except Exception as e:
-    st.sidebar.error("❌ مشكلة في الملفات")
+    st.sidebar.error("❌ مشكلة في تحميل الملفات")
 
 # 3. واجهة المستخدم
 st.title("🤖 نظام توقع استهلاك الطاقة الكهربائية")
@@ -36,38 +36,41 @@ with col2:
     st.success("### 📊 نتائج التحليل")
     if predict_btn:
         try:
-            # الخطوة 1: نعرف الـ Scaler محتاج كام عمود ونجهزهم
+            # الحل الجذري لكل مشاكل الـ Shapes
+            # 1. بنشوف الـ Scaler محتاج كام عمود (بناءً على ملف scaler.joblib)
             n_scaler = scaler.n_features_in_
             data_for_sc = np.zeros((1, n_scaler))
             data_for_sc[0, 0] = input_val
-            
-            # الخطوة 2: نعمل الـ Scaling
             scaled_full = scaler.transform(data_for_sc)
             
             if "MLP" in model_choice:
-                # الخطوة 3: نعرف الـ MLP محتاج كام عمود بالظبط (هنا السر!)
-                # بنجرب نقرأها من الموديل مباشرة
-                try:
-                    n_mlp = mlp_model.n_features_in_
-                except:
-                    n_mlp = mlp_model.coefs_[0].shape[0]
-                
-                final_input = scaled_full[:, :n_mlp]
+                # الموديل الأساسي MLP
+                n_mlp = mlp_model.input_shape[1] if hasattr(mlp_model, 'input_shape') else 10
+                final_input = np.zeros((1, n_mlp))
+                # بناخد اللي نقدر عليه من البيانات الموزونة
+                fill_len = min(scaled_full.shape[1], n_mlp)
+                final_input[0, :fill_len] = scaled_full[0, :fill_len]
                 res = mlp_model.predict(final_input)[0][0]
             else:
-                # الخطوة 4: للـ LSTM برضه نعرف محتاج كام
-                n_lstm = lstm_model.input_shape[-1]
-                final_input = scaled_full[:, :n_lstm].reshape(1, 1, n_lstm)
-                res = lstm_model.predict(final_input)[0][0]
+                # الموديل المتطور LSTM (اللي كان طالب 13 عمود في الصورة)
+                # بنقرأ الـ Shape المطلوب من الموديل نفسه
+                target_shape = lstm_model.input_shape # (None, 1, 13)
+                n_lstm = target_shape[-1] 
+                
+                lstm_input = np.zeros((1, 1, n_lstm))
+                # بنملا الأعمدة المتاحة
+                fill_len = min(scaled_full.shape[1], n_lstm)
+                lstm_input[0, 0, :fill_len] = scaled_full[0, :fill_len]
+                
+                res = lstm_model.predict(lstm_input)[0][0]
 
             st.metric(label=f"التكلفة المتوقعة ({model_choice})", value=f"{abs(res):.2f} جنيه")
             st.balloons()
             
         except Exception as e:
-            st.error(f"خطأ في الحساب: {e}")
-            st.write("حاولي التأكد من أن قيم المدخلات منطقية.")
+            st.error(f"خطأ تقني: {e}")
     else:
         st.write("أدخل البيانات ثم اضغط على الزر...")
 
 st.markdown("---")
-st.caption(" مشروع التخرج 2026")
+st.caption("  مشروع التخرج 2026")
